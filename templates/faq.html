@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}FAQ - servers.com{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Frequently Asked Questions</h1>
+
+    <div class="space-y-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-2">What virtualization platform do you use?</h3>
+            <p class="text-sm text-gray-600">We use Proxmox VE, an enterprise-grade open-source virtualization platform. Each VM runs with full KVM virtualization for maximum performance and isolation.</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-2">How are IP addresses assigned?</h3>
+            <p class="text-sm text-gray-600">IP addresses are automatically assigned to your server via DHCP from our subnet. Your server will receive an IP address as soon as it boots up.</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-2">What operating systems are available?</h3>
+            <p class="text-sm text-gray-600">We offer a selection of popular Linux distributions including Ubuntu, Debian, CentOS Stream, Rocky Linux, AlmaLinux, and Windows Server. You can select your preferred OS when ordering a server.</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-2">How do payments work?</h3>
+            <p class="text-sm text-gray-600">We accept cryptocurrency payments through BitPay. When you place an order, you will be redirected to BitPay to complete the payment using Bitcoin or other supported cryptocurrencies.</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-2">How do backups work?</h3>
+            <p class="text-sm text-gray-600">You can create on-demand backups of your server from the server management panel. Backups are stored on our infrastructure and can be downloaded at any time. We use compressed backup format for efficient storage.</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-2">What are snapshots?</h3>
+            <p class="text-sm text-gray-600">Snapshots capture the current state of your server including disk, memory, and configuration. They are useful for creating restore points before making changes. You can create, manage, and download snapshots from your server panel.</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-2">Can I upgrade my server?</h3>
+            <p class="text-sm text-gray-600">Yes, you can upgrade to a higher plan at any time from your server management panel. You will only pay the difference between your current plan and the new plan. Downgrades are not supported.</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-2">What does "purge" mean?</h3>
+            <p class="text-sm text-gray-600">Purging a server permanently deletes it, including all data, backups, and snapshots associated with it. This action cannot be undone. You will be asked to confirm by typing the server hostname before purging.</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-2">What is the difference between stop, shutdown, and reboot?</h3>
+            <p class="text-sm text-gray-600"><strong>Shutdown</strong> sends an ACPI shutdown signal, allowing the OS to gracefully power off. <strong>Stop</strong> immediately kills the VM (like pulling the power cord). <strong>Reboot</strong> sends a reboot signal to the OS.</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-2">How can I get support?</h3>
+            <p class="text-sm text-gray-600">You can open a support ticket from your customer dashboard. Our team will respond as soon as possible. You can set ticket priority to low, medium, or high depending on urgency.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

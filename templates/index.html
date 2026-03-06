@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}servers.com - Simple Server Hosting{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <!-- Hero -->
+    <div class="text-center mb-16">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Simple Server Hosting</h1>
+        <p class="text-lg text-gray-600 mb-8">Deploy virtual servers in minutes. Pay with Bitcoin.</p>
+        <a href="{{ url_for('auth.register') }}" class="bg-gray-900 text-white px-6 py-3 rounded text-sm font-medium hover:bg-gray-700">Get Started</a>
+    </div>
+
+    <!-- Plans -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+        {% for plan_id, plan in config.PLANS.items() %}
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ plan.name }}</h3>
+            <p class="text-3xl font-bold text-gray-900 mb-4">${{ "%.2f"|format(plan.price) }}<span class="text-sm text-gray-500 font-normal">/mo</span></p>
+            <ul class="text-sm text-gray-600 space-y-2 mb-6">
+                <li>{{ plan.cores }} vCPU Core{{ "s" if plan.cores > 1 }}</li>
+                <li>{{ (plan.ram / 1024)|int }} GB RAM</li>
+                <li>{{ plan.disk }} GB SSD</li>
+                <li>{{ (plan.bandwidth / 1000)|int }} TB Bandwidth</li>
+            </ul>
+            <a href="{{ url_for('auth.register') }}" class="block text-center border border-gray-900 text-gray-900 px-4 py-2 rounded text-sm hover:bg-gray-900 hover:text-white">Select Plan</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Features -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="text-center">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Instant Deployment</h3>
+            <p class="text-sm text-gray-600">Servers are provisioned automatically with IPs assigned via DHCP.</p>
+        </div>
+        <div class="text-center">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Backups & Snapshots</h3>
+            <p class="text-sm text-gray-600">Create and download backups and snapshots of your servers anytime.</p>
+        </div>
+        <div class="text-center">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Bitcoin Payments</h3>
+            <p class="text-sm text-gray-600">Pay securely with cryptocurrency via BitPay.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

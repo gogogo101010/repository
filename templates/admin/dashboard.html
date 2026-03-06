@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard - servers.com{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div class="bg-white border border-gray-200 rounded-lg p-5">
+            <p class="text-sm text-gray-500 mb-1">Total Servers</p>
+            <p class="text-2xl font-bold text-gray-900">{{ stats.total_servers }}</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-5">
+            <p class="text-sm text-gray-500 mb-1">Active Servers</p>
+            <p class="text-2xl font-bold text-gray-900">{{ stats.active_servers }}</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-5">
+            <p class="text-sm text-gray-500 mb-1">Total Users</p>
+            <p class="text-2xl font-bold text-gray-900">{{ stats.total_users }}</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-5">
+            <p class="text-sm text-gray-500 mb-1">Open Tickets</p>
+            <p class="text-2xl font-bold text-gray-900">{{ stats.open_tickets }}</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-5">
+            <p class="text-sm text-gray-500 mb-1">Revenue</p>
+            <p class="text-2xl font-bold text-gray-900">${{ "%.2f"|format(stats.total_revenue) }}</p>
+        </div>
+    </div>
+
+    <!-- Admin Nav -->
+    <div class="flex gap-2 mb-8">
+        <a href="{{ url_for('admin.servers') }}" class="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-50">All Servers</a>
+        <a href="{{ url_for('admin.tickets') }}" class="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-50">All Tickets</a>
+        <a href="{{ url_for('admin.payments') }}" class="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-50">All Payments</a>
+        <a href="{{ url_for('admin.users') }}" class="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-50">All Users</a>
+    </div>
+
+    <!-- Recent Tickets -->
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Tickets</h2>
+    {% if recent_tickets %}
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Subject</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Customer</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Status</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Updated</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for ticket in recent_tickets %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                        <a href="{{ url_for('admin.ticket_detail', ticket_id=ticket._id) }}" class="text-gray-900 hover:underline font-medium">{{ ticket.subject }}</a>
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">{{ ticket.user.email if ticket.user else "Unknown" }}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-block px-2 py-1 rounded text-xs
+                            {% if ticket.status == 'open' %}bg-green-50 text-green-700
+                            {% elif ticket.status == 'closed' %}bg-gray-100 text-gray-500
+                            {% else %}bg-yellow-50 text-yellow-700{% endif %}">{{ ticket.status }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-500">{{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-500">No tickets.</p>
+    {% endif %}
+</div>
+{% endblock %}
