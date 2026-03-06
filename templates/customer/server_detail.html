@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}{{ server.hostname }} - servers.com{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <a href="{{ url_for('customer.servers') }}" class="text-sm text-gray-500 hover:text-gray-700 mb-1 block">&larr; Back to Servers</a>
+            <h1 class="text-2xl font-bold text-gray-900">{{ server.hostname }}</h1>
+        </div>
+        <span class="inline-block px-3 py-1 rounded text-sm
+            {% if server.status == 'active' %}bg-green-50 text-green-700
+            {% elif server.status == 'provisioning' %}bg-yellow-50 text-yellow-700
+            {% elif server.status == 'purged' %}bg-red-50 text-red-700
+            {% else %}bg-gray-50 text-gray-700{% endif %}">{{ server.status }}</span>
+    </div>
+
+    <!-- Server Info -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Server Details</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <p class="text-gray-500">IP Address</p>
+                <p class="font-medium text-gray-900">{{ server.ip_address or "Pending" }}</p>
+            </div>
+            <div>
+                <p class="text-gray-500">Plan</p>
+                <p class="font-medium text-gray-900">{{ server.plan_id|capitalize }}</p>
+            </div>
+            <div>
+                <p class="text-gray-500">Specs</p>
+                <p class="font-medium text-gray-900">{{ server.cores }} vCPU / {{ (server.ram / 1024)|int }} GB / {{ server.disk }} GB</p>
+            </div>
+            <div>
+                <p class="text-gray-500">Price</p>
+                <p class="font-medium text-gray-900">${{ "%.2f"|format(server.price) }}/mo</p>
+            </div>
+        </div>
+
+        {% if vm_status %}
+        <div class="mt-4 pt-4 border-t border-gray-100">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                    <p class="text-gray-500">VM Status</p>
+                    <p class="font-medium text-gray-900">{{ vm_status.status|capitalize }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">CPU Usage</p>
+                    <p class="font-medium text-gray-900">{{ "%.1f"|format(vm_status.cpu * 100) }}%</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Memory</p>
+                    <p class="font-medium text-gray-900">{{ (vm_status.mem / 1048576)|int }} / {{ (vm_status.maxmem / 1048576)|int }} MB</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Uptime</p>
+                    <p class="font-medium text-gray-900">{{ (vm_status.uptime / 3600)|int }}h {{ ((vm_status.uptime % 3600) / 60)|int }}m</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if server.status != 'purged' and server.vm_id %}
+    <!-- Power Actions -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Power Actions</h2>
+        <div class="flex flex-wrap gap-2">
+            <form method="POST" action="{{ url_for('customer.server_action', server_id=server._id) }}" class="inline">
+                <input type="hidden" name="action" value="start">
+                <button type="submit" class="border border-green-300 text-green-700 px-4 py-2 rounded text-sm hover:bg-green-50">Start</button>
+            </form>
+            <form method="POST" action="{{ url_for('customer.server_action', server_id=server._id) }}" class="inline">
+                <input type="hidden" name="action" value="shutdown">
+                <button type="submit" class="border border-yellow-300 text-yellow-700 px-4 py-2 rounded text-sm hover:bg-yellow-50">Shutdown</button>
+            </form>
+            <form method="POST" action="{{ url_for('customer.server_action', server_id=server._id) }}" class="inline">
+                <input type="hidden" name="action" value="reboot">
+                <button type="submit" class="border border-blue-300 text-blue-700 px-4 py-2 rounded text-sm hover:bg-blue-50">Reboot</button>
+            </form>
+            <form method="POST" action="{{ url_for('customer.server_action', server_id=server._id) }}" class="inline">
+                <input type="hidden" name="action" value="stop">
+                <button type="submit" class="border border-red-300 text-red-700 px-4 py-2 rounded text-sm hover:bg-red-50">Stop</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Upgrade -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-base font-semibold text-gray-900">Upgrade Server</h2>
+                <p class="text-sm text-gray-500">Move to a higher plan with more resources.</p>
+            </div>
+            <a href="{{ url_for('customer.upgrade_server', server_id=server._id) }}" class="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-50">Upgrade</a>
+        </div>
+    </div>
+
+    <!-- Snapshots -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Snapshots</h2>
+
+        <form method="POST" action="{{ url_for('customer.create_snapshot', server_id=server._id) }}" class="flex gap-2 mb-4">
+            <input type="text" name="snapshot_name" placeholder="Snapshot name" required
+                class="border border-gray-300 rounded px-3 py-2 text-sm flex-1 focus:outline-none focus:border-gray-500">
+            <input type="text" name="snapshot_description" placeholder="Description (optional)"
+                class="border border-gray-300 rounded px-3 py-2 text-sm flex-1 focus:outline-none focus:border-gray-500">
+            <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">Create</button>
+        </form>
+
+        {% if snapshots %}
+        <table class="w-full text-sm">
+            <thead class="border-b border-gray-200">
+                <tr>
+                    <th class="text-left py-2 font-medium text-gray-500">Name</th>
+                    <th class="text-left py-2 font-medium text-gray-500">Description</th>
+                    <th class="text-right py-2 font-medium text-gray-500">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for snap in snapshots %}
+                {% if snap.name != 'current' %}
+                <tr>
+                    <td class="py-2 text-gray-900">{{ snap.name }}</td>
+                    <td class="py-2 text-gray-600">{{ snap.description or '-' }}</td>
+                    <td class="py-2 text-right">
+                        <form method="POST" action="{{ url_for('customer.delete_snapshot', server_id=server._id, snapname=snap.name) }}" class="inline">
+                            <button type="submit" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-sm text-gray-500">No snapshots.</p>
+        {% endif %}
+    </div>
+
+    <!-- Backups -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Backups</h2>
+
+        <form method="POST" action="{{ url_for('customer.create_backup', server_id=server._id) }}" class="mb-4">
+            <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">Create Backup</button>
+        </form>
+
+        {% if backups %}
+        <table class="w-full text-sm">
+            <thead class="border-b border-gray-200">
+                <tr>
+                    <th class="text-left py-2 font-medium text-gray-500">File</th>
+                    <th class="text-left py-2 font-medium text-gray-500">Size</th>
+                    <th class="text-right py-2 font-medium text-gray-500">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for backup in backups %}
+                <tr>
+                    <td class="py-2 text-gray-900">{{ backup.volid }}</td>
+                    <td class="py-2 text-gray-600">{{ (backup.size / 1073741824)|round(2) }} GB</td>
+                    <td class="py-2 text-right">
+                        <span class="text-gray-500 text-sm">Download via Proxmox</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-sm text-gray-500">No backups.</p>
+        {% endif %}
+    </div>
+
+    <!-- Purge (Danger Zone) -->
+    <div class="bg-white border border-red-200 rounded-lg p-6">
+        <h2 class="text-base font-semibold text-red-700 mb-2">Danger Zone</h2>
+        <p class="text-sm text-gray-600 mb-4">Purging a server permanently deletes it and all associated data. This cannot be undone.</p>
+        <form method="POST" action="{{ url_for('customer.server_action', server_id=server._id) }}">
+            <input type="hidden" name="action" value="purge">
+            <div class="flex gap-2">
+                <input type="text" name="confirm_purge" placeholder="Type hostname to confirm"
+                    class="border border-gray-300 rounded px-3 py-2 text-sm flex-1 max-w-xs focus:outline-none focus:border-red-500">
+                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700">Purge Server</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

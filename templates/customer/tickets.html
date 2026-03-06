@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Support Tickets - servers.com{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Support Tickets</h1>
+        <a href="{{ url_for('customer.new_ticket_page') }}" class="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">New Ticket</a>
+    </div>
+
+    {% if tickets %}
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Subject</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Priority</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Status</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Updated</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for ticket in tickets %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                        <a href="{{ url_for('customer.ticket_detail', ticket_id=ticket._id) }}" class="text-gray-900 hover:underline font-medium">{{ ticket.subject }}</a>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-block px-2 py-1 rounded text-xs
+                            {% if ticket.priority == 'high' %}bg-red-50 text-red-700
+                            {% elif ticket.priority == 'medium' %}bg-yellow-50 text-yellow-700
+                            {% else %}bg-gray-50 text-gray-700{% endif %}">{{ ticket.priority }}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-block px-2 py-1 rounded text-xs
+                            {% if ticket.status == 'open' %}bg-green-50 text-green-700
+                            {% elif ticket.status == 'closed' %}bg-gray-100 text-gray-500
+                            {% else %}bg-yellow-50 text-yellow-700{% endif %}">{{ ticket.status }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-500">{{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-200 rounded-lg p-8 text-center">
+        <p class="text-gray-500 mb-4">No tickets yet.</p>
+        <a href="{{ url_for('customer.new_ticket_page') }}" class="text-gray-900 underline text-sm">Create your first ticket</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

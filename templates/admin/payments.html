@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}All Payments - Admin - servers.com{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">All Payments</h1>
+
+    {% if payments %}
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Date</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Customer</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Description</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Amount</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500">Status</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-500"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for payment in payments %}
+                <tr>
+                    <td class="px-4 py-3 text-gray-500">{{ payment.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ payment.user.email if payment.user else "Unknown" }}</td>
+                    <td class="px-4 py-3 text-gray-900">{{ payment.description }}</td>
+                    <td class="px-4 py-3 text-gray-900 font-medium">${{ "%.2f"|format(payment.amount) }}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-block px-2 py-1 rounded text-xs
+                            {% if payment.status == 'paid' %}bg-green-50 text-green-700
+                            {% elif payment.status == 'expired' %}bg-red-50 text-red-700
+                            {% else %}bg-yellow-50 text-yellow-700{% endif %}">{{ payment.status }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        {% if payment.status == 'pending' %}
+                        <form method="POST" action="{{ url_for('admin.mark_paid', payment_id=payment._id) }}" class="inline">
+                            <button type="submit" class="text-green-700 hover:text-green-900 text-sm">Mark Paid</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-500">No payments.</p>
+    {% endif %}
+</div>
+{% endblock %}
