@@ -17,6 +17,7 @@
                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500">
         </div>
         <button type="submit" class="w-full bg-gray-900 text-white py-2 rounded text-sm font-medium hover:bg-gray-700">Login</button>
+        <p class="text-sm text-gray-500 text-center"><a href="{{ url_for('auth.forgot_password') }}" class="text-gray-900 underline">Forgot password?</a></p>
         <p class="text-sm text-gray-500 text-center">Don't have an account? <a href="{{ url_for('auth.register') }}" class="text-gray-900 underline">Sign up</a></p>
     </form>
 </div>

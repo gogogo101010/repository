@@ -1,8 +1,24 @@
+import logging
 from flask import Flask
 from flask_login import LoginManager
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from config import Config
 from utils.db import init_db, get_db
 from bson import ObjectId
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=Config.RATELIMIT_STORAGE_URI,
+    default_limits=["200 per minute"],
+)
 
 
 def create_app():
@@ -11,6 +27,9 @@ def create_app():
 
     # Initialize database
     init_db(app)
+
+    # Rate limiter
+    limiter.init_app(app)
 
     # Flask-Login
     login_manager = LoginManager()
@@ -37,6 +56,8 @@ def create_app():
     app.register_blueprint(customer_bp, url_prefix="/customer")
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(api_bp, url_prefix="/api")
+
+    logger.info("Application started")
 
     return app
 

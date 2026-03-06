@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Console - {{ server.hostname }} - servers.com{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Console: {{ server.hostname }}</h1>
+        <a href="{{ url_for('customer.server_detail', server_id=server._id) }}" class="text-sm text-gray-600 hover:text-gray-900">Back to Server</a>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+        {% if vnc_data %}
+            <p class="text-sm text-gray-600 mb-4">VNC console connection details:</p>
+            <div class="bg-gray-50 rounded p-4 font-mono text-sm">
+                <p><span class="text-gray-500">Ticket:</span> {{ vnc_data.ticket[:20] }}...</p>
+                <p><span class="text-gray-500">Port:</span> {{ vnc_data.port }}</p>
+            </div>
+            <p class="text-sm text-gray-500 mt-4">Use a VNC client or noVNC to connect to the server console using the details above.</p>
+        {% else %}
+            <p class="text-sm text-gray-500">Console is not available for this server.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

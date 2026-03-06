@@ -2,6 +2,37 @@ from flask_login import UserMixin
 from datetime import datetime, timezone
 
 
+# --- Status Constants ---
+
+class ServerStatus:
+    PROVISIONING = "provisioning"
+    PENDING_PROVISION = "pending_provision"
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    PURGED = "purged"
+
+
+class PaymentStatus:
+    PENDING = "pending"
+    PAID = "paid"
+    EXPIRED = "expired"
+
+
+class TicketStatus:
+    OPEN = "open"
+    CLOSED = "closed"
+    WAITING = "waiting"
+
+
+class TicketPriority:
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+# --- Models ---
+
+
 class User(UserMixin):
     def __init__(self, data):
         self.data = data
@@ -9,7 +40,12 @@ class User(UserMixin):
         self.email = data.get("email", "")
         self.name = data.get("name", "")
         self.is_admin = data.get("is_admin", False)
+        self.suspended = data.get("suspended", False)
         self.created_at = data.get("created_at", datetime.now(timezone.utc))
+
+    @property
+    def is_active(self):
+        return not self.suspended
 
 
 def new_user(name, email, password_hash):
@@ -18,6 +54,7 @@ def new_user(name, email, password_hash):
         "email": email,
         "password": password_hash,
         "is_admin": False,
+        "suspended": False,
         "balance": 0.00,
         "created_at": datetime.now(timezone.utc),
     }
@@ -31,7 +68,7 @@ def new_server(user_id, plan_id, plan_data, hostname, iso, vm_id=None):
         "iso": iso,
         "vm_id": vm_id,
         "ip_address": None,
-        "status": "provisioning",
+        "status": ServerStatus.PROVISIONING,
         "cores": plan_data["cores"],
         "ram": plan_data["ram"],
         "disk": plan_data["disk"],
@@ -42,11 +79,11 @@ def new_server(user_id, plan_id, plan_data, hostname, iso, vm_id=None):
     }
 
 
-def new_ticket(user_id, subject, message, priority="medium"):
+def new_ticket(user_id, subject, message, priority=TicketPriority.MEDIUM):
     return {
         "user_id": user_id,
         "subject": subject,
-        "status": "open",
+        "status": TicketStatus.OPEN,
         "priority": priority,
         "messages": [
             {
@@ -67,7 +104,7 @@ def new_payment(user_id, amount, description, server_id=None):
         "description": description,
         "server_id": server_id,
         "invoice_id": None,
-        "status": "pending",
+        "status": PaymentStatus.PENDING,
         "payment_url": None,
         "created_at": datetime.now(timezone.utc),
     }

@@ -5,7 +5,10 @@ load_dotenv()
 
 
 class Config:
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    if not SECRET_KEY:
+        raise RuntimeError("SECRET_KEY environment variable is required. Set it in your .env file.")
+
     MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/servers_com")
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
@@ -13,11 +16,15 @@ class Config:
     PROXMOX_USER = os.getenv("PROXMOX_USER", "root@pam")
     PROXMOX_PASSWORD = os.getenv("PROXMOX_PASSWORD", "")
     PROXMOX_NODE = os.getenv("PROXMOX_NODE", "pve")
+    PROXMOX_VERIFY_SSL = os.getenv("PROXMOX_VERIFY_SSL", "false").lower() in ("true", "1", "yes")
 
     BITPAY_API_KEY = os.getenv("BITPAY_API_KEY", "")
     BITPAY_API_URL = os.getenv("BITPAY_API_URL", "https://bitpay.com/api")
 
     DOMAIN = os.getenv("DOMAIN", "servers.com")
+
+    # Rate limiting
+    RATELIMIT_STORAGE_URI = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     # Server plans
     PLANS = {

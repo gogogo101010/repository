@@ -1,3 +1,4 @@
+import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from utils.db import get_db
@@ -6,7 +7,15 @@ from bson import ObjectId
 from datetime import datetime, timezone
 from functools import wraps
 
+logger = logging.getLogger(__name__)
+
 admin_bp = Blueprint("admin", __name__)
+
+PER_PAGE = 20
+
+
+def paginate(query, page):
+    return query.skip((page - 1) * PER_PAGE).limit(PER_PAGE)
 
 
 def admin_required(f):
@@ -19,6 +28,19 @@ def admin_required(f):
         return f(*args, **kwargs)
 
     return decorated
+
+
+def attach_users(db, records, user_id_field="user_id"):
+    """Batch-load user info for a list of records to avoid N+1 queries."""
+    user_ids = list({ObjectId(r[user_id_field]) for r in records if r.get(user_id_field)})
+    if not user_ids:
+        return
+    users_map = {
+        str(u["_id"]): u
+        for u in db.users.find({"_id": {"$in": user_ids}}, {"name": 1, "email": 1})
+    }
+    for record in records:
+        record["user"] = users_map.get(record.get(user_id_field))
 
 
 @admin_bp.route("/")
@@ -36,13 +58,7 @@ def dashboard():
         ),
     }
     recent_tickets = list(db.tickets.find().sort("updated_at", -1).limit(10))
-
-    # Attach user info to tickets
-    for ticket in recent_tickets:
-        user = db.users.find_one(
-            {"_id": ObjectId(ticket["user_id"])}, {"name": 1, "email": 1}
-        )
-        ticket["user"] = user
+    attach_users(db, recent_tickets)
 
     return render_template(
         "admin/dashboard.html", stats=stats, recent_tickets=recent_tickets
@@ -56,15 +72,19 @@ def dashboard():
 @admin_required
 def servers():
     db = get_db()
-    servers = list(db.servers.find().sort("created_at", -1))
+    page = request.args.get("page", 1, type=int)
+    total = db.servers.count_documents({})
+    servers = list(
+        paginate(db.servers.find().sort("created_at", -1), page)
+    )
+    attach_users(db, servers)
 
-    for server in servers:
-        user = db.users.find_one(
-            {"_id": ObjectId(server["user_id"])}, {"name": 1, "email": 1}
-        )
-        server["user"] = user
-
-    return render_template("admin/servers.html", servers=servers)
+    return render_template(
+        "admin/servers.html",
+        servers=servers,
+        page=page,
+        total_pages=(total + PER_PAGE - 1) // PER_PAGE,
+    )
 
 
 @admin_bp.route("/servers/<server_id>")
@@ -86,6 +106,7 @@ def server_detail(server_id):
         try:
             vm_status = proxmox.get_vm_status(server["vm_id"])
         except Exception:
+            logger.warning("Failed to get VM status for server %s", server_id)
             vm_status = None
 
     return render_template(
@@ -121,14 +142,58 @@ def provision_server(server_id):
             iso=iso_file,
         )
 
-        # Get assigned IP (from DHCP — will be available after VM boots)
+        from datetime import timedelta
+
         db.servers.update_one(
             {"_id": ObjectId(server_id)},
-            {"$set": {"vm_id": int(vmid), "status": "active"}},
+            {
+                "$set": {
+                    "vm_id": int(vmid),
+                    "status": "active",
+                    "expires_at": datetime.now(timezone.utc) + timedelta(days=30),
+                }
+            },
         )
+        logger.info("Admin %s provisioned server %s with VMID %s", current_user.id, server_id, vmid)
         flash(f"Server provisioned with VMID {vmid}.", "success")
-    except Exception as e:
-        flash(f"Provisioning failed: {str(e)}", "error")
+    except Exception:
+        logger.exception("Provisioning failed for server %s", server_id)
+        flash("Provisioning failed. Check logs for details.", "error")
+
+    return redirect(url_for("admin.server_detail", server_id=server_id))
+
+
+@admin_bp.route("/servers/<server_id>/action", methods=["POST"])
+@admin_required
+def server_action(server_id):
+    db = get_db()
+    server = db.servers.find_one({"_id": ObjectId(server_id)})
+    if not server or not server.get("vm_id"):
+        flash("Server not found or not provisioned.", "error")
+        return redirect(url_for("admin.servers"))
+
+    action = request.form.get("action")
+    vm_id = server["vm_id"]
+
+    try:
+        if action == "start":
+            proxmox.start_vm(vm_id)
+            flash("Server is starting.", "success")
+        elif action == "shutdown":
+            proxmox.shutdown_vm(vm_id)
+            flash("Server is shutting down.", "success")
+        elif action == "reboot":
+            proxmox.reboot_vm(vm_id)
+            flash("Server is rebooting.", "success")
+        elif action == "stop":
+            proxmox.stop_vm(vm_id)
+            flash("Server has been stopped.", "success")
+        else:
+            flash("Unknown action.", "error")
+        logger.info("Admin %s performed '%s' on server %s", current_user.id, action, server_id)
+    except Exception:
+        logger.exception("Admin server action '%s' failed for server %s", action, server_id)
+        flash("Server action failed. Check logs for details.", "error")
 
     return redirect(url_for("admin.server_detail", server_id=server_id))
 
@@ -152,21 +217,24 @@ def update_server_ip(server_id):
 @admin_required
 def tickets():
     db = get_db()
+    page = request.args.get("page", 1, type=int)
     status_filter = request.args.get("status", "")
     query = {}
     if status_filter:
         query["status"] = status_filter
 
-    tickets = list(db.tickets.find(query).sort("updated_at", -1))
-
-    for ticket in tickets:
-        user = db.users.find_one(
-            {"_id": ObjectId(ticket["user_id"])}, {"name": 1, "email": 1}
-        )
-        ticket["user"] = user
+    total = db.tickets.count_documents(query)
+    tickets = list(
+        paginate(db.tickets.find(query).sort("updated_at", -1), page)
+    )
+    attach_users(db, tickets)
 
     return render_template(
-        "admin/tickets.html", tickets=tickets, status_filter=status_filter
+        "admin/tickets.html",
+        tickets=tickets,
+        status_filter=status_filter,
+        page=page,
+        total_pages=(total + PER_PAGE - 1) // PER_PAGE,
     )
 
 
@@ -216,15 +284,19 @@ def ticket_detail(ticket_id):
 @admin_required
 def payments():
     db = get_db()
-    payments = list(db.payments.find().sort("created_at", -1))
+    page = request.args.get("page", 1, type=int)
+    total = db.payments.count_documents({})
+    payments = list(
+        paginate(db.payments.find().sort("created_at", -1), page)
+    )
+    attach_users(db, payments)
 
-    for payment in payments:
-        user = db.users.find_one(
-            {"_id": ObjectId(payment["user_id"])}, {"name": 1, "email": 1}
-        )
-        payment["user"] = user
-
-    return render_template("admin/payments.html", payments=payments)
+    return render_template(
+        "admin/payments.html",
+        payments=payments,
+        page=page,
+        total_pages=(total + PER_PAGE - 1) // PER_PAGE,
+    )
 
 
 @admin_bp.route("/payments/<payment_id>/mark-paid", methods=["POST"])
@@ -242,6 +314,7 @@ def mark_paid(payment_id):
             {"$set": {"status": "pending_provision"}},
         )
 
+    logger.info("Admin %s marked payment %s as paid", current_user.id, payment_id)
     flash("Payment marked as paid.", "success")
     return redirect(url_for("admin.payments"))
 
@@ -253,5 +326,44 @@ def mark_paid(payment_id):
 @admin_required
 def users():
     db = get_db()
-    users = list(db.users.find().sort("created_at", -1))
-    return render_template("admin/users.html", users=users)
+    page = request.args.get("page", 1, type=int)
+    search = request.args.get("q", "").strip()
+    query = {}
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}},
+        ]
+
+    total = db.users.count_documents(query)
+    users = list(
+        paginate(db.users.find(query).sort("created_at", -1), page)
+    )
+    return render_template(
+        "admin/users.html",
+        users=users,
+        search=search,
+        page=page,
+        total_pages=(total + PER_PAGE - 1) // PER_PAGE,
+    )
+
+
+@admin_bp.route("/users/<user_id>/toggle-suspend", methods=["POST"])
+@admin_required
+def toggle_suspend(user_id):
+    db = get_db()
+    user = db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        flash("User not found.", "error")
+        return redirect(url_for("admin.users"))
+
+    new_status = not user.get("suspended", False)
+    db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"suspended": new_status}},
+    )
+
+    action = "suspended" if new_status else "unsuspended"
+    logger.info("Admin %s %s user %s", current_user.id, action, user_id)
+    flash(f"User {action}.", "success")
+    return redirect(url_for("admin.users"))

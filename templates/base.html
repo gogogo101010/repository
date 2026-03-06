@@ -23,7 +23,7 @@
                         <a href="{{ url_for('customer.servers') }}" class="text-gray-600 hover:text-gray-900">Servers</a>
                         <a href="{{ url_for('customer.tickets') }}" class="text-gray-600 hover:text-gray-900">Tickets</a>
                         <span class="text-gray-400">|</span>
-                        <span class="text-sm text-gray-500">{{ current_user.email }}</span>
+                        <a href="{{ url_for('customer.profile') }}" class="text-sm text-gray-500 hover:text-gray-900">{{ current_user.email }}</a>
                         <a href="{{ url_for('auth.logout') }}" class="text-gray-600 hover:text-gray-900">Logout</a>
                     {% else %}
                         <a href="{{ url_for('auth.faq') }}" class="text-gray-600 hover:text-gray-900">FAQ</a>

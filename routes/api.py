@@ -1,6 +1,12 @@
+import logging
 from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
 from utils.db import get_db
 from utils.proxmox import proxmox
+from utils.bitpay import bitpay
+from bson import ObjectId
+
+logger = logging.getLogger(__name__)
 
 api_bp = Blueprint("api", __name__)
 
@@ -11,7 +17,6 @@ def bitpay_webhook():
     if not data:
         return jsonify({"error": "Invalid payload"}), 400
 
-    event = data.get("event", {})
     invoice_data = data.get("data", {})
     invoice_id = invoice_data.get("id")
     status = invoice_data.get("status")
@@ -25,10 +30,19 @@ def bitpay_webhook():
     if not payment:
         return jsonify({"error": "Payment not found"}), 404
 
-    if status == "confirmed" or status == "complete":
+    # Verify the invoice status directly with BitPay to prevent spoofed webhooks
+    try:
+        verified_invoice = bitpay.get_invoice(invoice_id)
+        verified_status = verified_invoice.get("status")
+    except Exception:
+        logger.error("Failed to verify BitPay invoice %s", invoice_id)
+        return jsonify({"error": "Verification failed"}), 500
+
+    if verified_status in ("confirmed", "complete"):
         db.payments.update_one(
             {"_id": payment["_id"]}, {"$set": {"status": "paid"}}
         )
+        logger.info("Payment %s marked as paid (invoice %s)", payment["_id"], invoice_id)
 
         # If this payment is for a server, update server status
         if payment.get("server_id"):
@@ -37,24 +51,27 @@ def bitpay_webhook():
                 {"$set": {"status": "pending_provision"}},
             )
 
-    elif status == "expired":
+    elif verified_status == "expired":
         db.payments.update_one(
             {"_id": payment["_id"]}, {"$set": {"status": "expired"}}
         )
+        logger.info("Payment %s expired (invoice %s)", payment["_id"], invoice_id)
 
     return jsonify({"status": "ok"}), 200
 
 
 @api_bp.route("/server/<server_id>/status")
+@login_required
 def server_status(server_id):
-    from flask_login import current_user, login_required
-    from bson import ObjectId
-
     db = get_db()
     server = db.servers.find_one({"_id": ObjectId(server_id)})
 
     if not server:
         return jsonify({"error": "Not found"}), 404
+
+    # Verify the requesting user owns this server
+    if server["user_id"] != current_user.id and not current_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
 
     if not server.get("vm_id"):
         return jsonify({"status": server.get("status", "unknown")})
@@ -73,4 +90,5 @@ def server_status(server_id):
             }
         )
     except Exception:
+        logger.warning("Failed to reach VM %s for server %s", server["vm_id"], server_id)
         return jsonify({"status": "unreachable"}), 503
